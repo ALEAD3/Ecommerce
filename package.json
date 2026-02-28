@@ -5,7 +5,9 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "backend": "mvn spring-boot:run",          
+    "dev": "concurrently \"npm run backend\" \"npm run serve\""  
   },
   "dependencies": {
     "@fortawesome/vue-fontawesome": "^2.0.6",
@@ -23,6 +25,7 @@
     "@vue/cli-plugin-vuex": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
     "babel-eslint": "^10.1.0",
+    "concurrently": "^9.2.1",
     "eslint": "^6.7.2",
     "eslint-plugin-vue": "^6.2.2",
     "material-design-icons-iconfont": "^6.1.1",

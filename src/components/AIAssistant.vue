@@ -20,7 +20,7 @@
           Asistente Virtual
         </v-card-title>
 
-        <v-card-text style="height:300px; overflow-y:auto;">
+        <v-card-text style="height:300px; overflow-y:auto;" ref="chatBox">
           <div v-for="(msg, i) in messages" :key="i">
             <strong>{{ msg.role }}:</strong>
             {{ msg.text }}
@@ -62,30 +62,47 @@ export default {
 
       const userMessage = this.input;
 
+      // Muestra el mensaje del usuario en el chat
       this.messages.push({
         role: "Usuario",
         text: userMessage
       });
 
-      const response = await fetch("http://localhost:8080/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage })
-      });
-
-      const data = await response.json();
-
-      this.messages.push({
-        role: "IA",
-        text: data.reply
-      });
-
-      if (data.action === "addToCart") {
-        this.$store.commit("ADD_TO_CART", data.product);
-      }
-
       this.input = "";
+
+      try {
+        const response = await fetch("http://localhost:8081/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message: userMessage })
+        });
+
+        const data = await response.json(); // parseamos JSON
+        this.messages.push({
+          role: "Agente",
+          text: data.reply
+        });
+
+        // Auto-scroll al final del chat
+        this.$nextTick(() => {
+          const chatBox = this.$refs.chatBox;
+          if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+      } catch (error) {
+        console.error("Error:", error);
+        this.messages.push({
+          role: "Sistema",
+          text: "No se pudo conectar con el agente."
+        });
+      }
     }
-  }
-};
+  } // <-- Cierra methods
+}; // <-- Cierra export default
 </script>
+
+<style scoped>
+/* Opcional: estilos para el chat */
+</style>
