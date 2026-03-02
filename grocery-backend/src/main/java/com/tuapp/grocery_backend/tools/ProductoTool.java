@@ -1,7 +1,10 @@
 package com.tuapp.grocery_backend.tools;
 
 import com.tuapp.grocery_backend.model.Producto;
+import com.tuapp.grocery_backend.repository.ProductoRepository;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class ProductoTool {
@@ -13,8 +16,15 @@ public class ProductoTool {
     }
 
     public String consultarProducto(String nombre) {
-        Producto p = productoRepository.findByNombre(nombre);
-        if (p == null) return "No encontré ese producto.";
+
+        List<Producto> productos =
+                productoRepository.findByNombreIgnoreCase(nombre);
+
+        if (productos.isEmpty()) {
+            return "No encontré ese producto.";
+        }
+
+        Producto p = productos.get(0);
 
         return "El producto " + p.getNombre() +
                " cuesta $" + p.getPrecio() +
