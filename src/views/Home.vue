@@ -1,4 +1,3 @@
-```vue
 <template>
   <v-app>
     <Navbar />
@@ -56,17 +55,90 @@
 
           <Category />
 
-          <!-- TITULO BUSQUEDA (SOLO SI SE USA) -->
+          <!-- RESULTADOS DE BUSQUEDA -->
           <div v-if="busqueda">
+
             <v-toolbar flat color="transparent" class="mt-6">
               <v-toolbar-title class="text-h6">
                 Search Results
               </v-toolbar-title>
             </v-toolbar>
+
+            <v-row>
+
+              <v-col
+                v-for="item in productosFiltrados"
+                :key="item.id"
+                cols="12"
+                sm="6"
+                md="3"
+              >
+
+                <v-card class="pa-4 product-card" outlined>
+
+                  <div class="text-subtitle-1 font-weight-medium">
+                    {{ item.nombre }}
+                  </div>
+
+                  <div class="text-caption grey--text mb-2">
+                    {{ item.variedad }}
+                  </div>
+
+                  <div class="text-h6 font-weight-bold mb-3">
+                    ${{ item.precio }}
+                  </div>
+
+                  <div class="d-flex align-center justify-space-between">
+
+                    <div class="d-flex align-center">
+
+                      <v-btn icon small @click="decrease(item)">
+                        <v-icon>mdi-minus</v-icon>
+                      </v-btn>
+
+                      <span class="mx-2">{{ item.qty }}</span>
+
+                      <v-btn icon small @click="increase(item)">
+                        <v-icon color="green">mdi-plus</v-icon>
+                      </v-btn>
+
+                    </div>
+
+                    <div class="d-flex">
+
+                      <v-btn fab small class="wishlist-btn" @click="addToWishlist(item)">
+                        <v-icon color="#FF6D59">mdi-heart</v-icon>
+                      </v-btn>
+
+                      <v-btn color="green" dark fab small class="cart-btn" @click="addToCart(item)">
+                        <v-icon>mdi-cart</v-icon>
+                      </v-btn>
+
+                    </div>
+
+                  </div>
+
+                </v-card>
+
+              </v-col>
+
+              <v-col v-if="productosFiltrados.length === 0" cols="12">
+                <v-alert type="info">
+                  No hay productos que coincidan
+                </v-alert>
+              </v-col>
+
+            </v-row>
+
           </div>
 
           <!-- PRODUCTOS POPULARES -->
-          <v-card flat color="#E2F2E5" class="rounded-xl mt-4 pa-6">
+          <v-card
+            v-if="!busqueda"
+            flat
+            color="#E2F2E5"
+            class="rounded-xl mt-4 pa-6"
+          >
 
             <v-toolbar flat color="transparent" class="mb-4">
               <v-toolbar-title class="text-h6">
@@ -136,83 +208,6 @@
 
           </v-card>
 
-          <!-- RESULTADOS DE BUSQUEDA -->
-          <!-- RESULTADOS DE BUSQUEDA -->
-<div v-if="busqueda">
-
-  <v-toolbar flat color="transparent" class="mt-6">
-    <v-toolbar-title class="text-h6">
-      Search Results
-    </v-toolbar-title>
-  </v-toolbar>
-
-  <v-row>
-
-    <v-col
-      v-for="item in productosFiltrados"
-      :key="item.id"
-      cols="12"
-      sm="6"
-      md="3"
-    >
-
-      <v-card class="pa-4 product-card" outlined>
-
-        <div class="text-subtitle-1 font-weight-medium">
-          {{ item.nombre }}
-        </div>
-
-        <div class="text-caption grey--text">
-          {{ item.variedad }}
-        </div>
-
-        <div class="text-h6 font-weight-bold mb-3">
-          ${{ item.precio }}
-        </div>
-
-        <div class="d-flex align-center justify-space-between">
-
-          <div class="d-flex align-center">
-
-            <v-btn icon small @click="decrease(item)">
-              <v-icon>mdi-minus</v-icon>
-            </v-btn>
-
-            <span class="mx-2">{{ item.qty }}</span>
-
-            <v-btn icon small @click="increase(item)">
-              <v-icon color="green">mdi-plus</v-icon>
-            </v-btn>
-
-          </div>
-
-          <div class="d-flex">
-
-            <v-btn fab small class="wishlist-btn" @click="addToWishlist(item)">
-              <v-icon color="#FF6D59">mdi-heart</v-icon>
-            </v-btn>
-
-            <v-btn color="green" dark fab small class="cart-btn" @click="addToCart(item)">
-              <v-icon>mdi-cart</v-icon>
-            </v-btn>
-
-          </div>
-
-        </div>
-
-      </v-card>
-
-    </v-col>
-
-    <v-col v-if="productosFiltrados.length === 0" cols="12">
-      <v-alert type="info">
-        No hay productos que coincidan
-      </v-alert>
-    </v-col>
-
-  </v-row>
-
-</div>
           <!-- CLIENTES -->
           <v-card flat color="#FAFAFA" class="mt-10 py-5 px-16">
 
@@ -276,7 +271,9 @@ export default {
 
     productosFiltrados(){
 
-      const texto = this.busqueda.toLowerCase()
+      const texto = this.busqueda.trim().toLowerCase()
+
+      if(!texto) return []
 
       return this.productos.filter(p =>
         (p.nombre || "").toLowerCase().includes(texto) ||
@@ -287,7 +284,7 @@ export default {
     productosRandom(){
       return [...this.productos]
         .sort(() => Math.random() - 0.5)
-        .slice(0,10)
+        .slice(0,12)
     }
 
   },
@@ -392,4 +389,3 @@ export default {
 }
 
 </style>
-```
