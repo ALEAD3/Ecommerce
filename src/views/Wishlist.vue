@@ -1,3 +1,4 @@
+```vue
 <template>
 <v-container>
 
@@ -10,15 +11,20 @@ No tienes productos guardados
 <v-card
 v-for="item in wishlist"
 :key="item.id"
-class="wishlist-item mb-3 pa-3"
+class="wishlist-item mb-3 px-3 py-2"
 outlined
 >
 
 <v-row align="center">
 
-<!-- Imagen -->
-<v-col cols="2">
-<v-img :src="item.img" height="60" contain/>
+<!-- Imagen pequeña -->
+<v-col cols="1" class="d-flex justify-center">
+<v-img
+:src="item.img || '/default.webp'"
+max-height="35"
+max-width="35"
+contain
+/>
 </v-col>
 
 <!-- Nombre -->
@@ -28,26 +34,24 @@ outlined
 </v-col>
 
 <!-- Precio -->
-<v-col cols="2">
+<v-col cols="2" class="font-weight-medium">
 ${{ item.price }}
 </v-col>
 
 <!-- Botones -->
-<v-col cols="3" class="d-flex">
+<v-col cols="4" class="d-flex align-center">
 
-<!-- agregar al carrito -->
 <v-btn
 color="green"
 small
 class="mr-2"
 @click="addToCart(item)"
 >
-<v-icon left>mdi-cart</v-icon>
+<v-icon left small>mdi-cart</v-icon>
 Agregar
 </v-btn>
 
-<!-- eliminar -->
-<v-btn icon @click="remove(item.id)">
+<v-btn icon small @click="remove(item.id)">
 <v-icon color="red">mdi-delete</v-icon>
 </v-btn>
 
@@ -57,6 +61,17 @@ Agregar
 
 </v-card>
 
+<!-- NOTIFICACIÓN BONITA -->
+<v-dialog v-model="dialog" max-width="400">
+  <v-card class="pa-6 text-center" color="#e8f5e9" outlined>
+    <v-icon size="64" color="green">mdi-check-circle</v-icon>
+    <h2 class="mt-4">{{ dialogMessage }}</h2>
+    <v-btn color="green" class="mt-4" @click="dialog = false">
+      Cerrar
+    </v-btn>
+  </v-card>
+</v-dialog>
+
 </v-container>
 </template>
 
@@ -65,7 +80,9 @@ export default {
 
 data(){
 return{
-wishlist:[]
+wishlist:[],
+dialog:false,
+dialogMessage:""
 }
 },
 
@@ -98,7 +115,8 @@ cantidad:1
 
 if(!response.ok) throw new Error("Error agregando al carrito")
 
-alert("Producto agregado al carrito 🛒")
+this.dialogMessage = "🛒 Producto agregado al carrito"
+this.dialog = true
 
 }catch(error){
 console.error(error)
@@ -120,6 +138,8 @@ this.loadWishlist()
 
 .wishlist-item{
 border-radius:10px;
+min-height:60px;
 }
 
 </style>
+```

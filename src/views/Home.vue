@@ -1,3 +1,4 @@
+```vue
 <template>
   <v-app>
     <Navbar />
@@ -8,7 +9,7 @@
 
           <!-- HERO -->
           <v-card class="mx-auto rounded-xl" flat>
-            <v-img src="cover2.png" max-height="100%" max-width="100%" contain>
+            <v-img src="/cover2.png" max-height="100%" max-width="100%" contain>
 
               <v-card-title class="top ml-10">
                 <h2 class="title1">Order your</h2>
@@ -76,16 +77,23 @@
 
                 <v-card class="pa-4 product-card" outlined>
 
+                  <v-img
+                    :src="item.img"
+                    height="120"
+                    contain
+                    class="mb-2"
+                  />
+
                   <div class="text-subtitle-1 font-weight-medium">
-                    {{ item.nombre }}
+                    {{ item.name }}
                   </div>
 
                   <div class="text-caption grey--text mb-2">
-                    {{ item.variedad }}
+                    {{ item.weight }}
                   </div>
 
                   <div class="text-h6 font-weight-bold mb-3">
-                    ${{ item.precio }}
+                    ${{ item.price }}
                   </div>
 
                   <div class="d-flex align-center justify-space-between">
@@ -120,12 +128,6 @@
 
                 </v-card>
 
-              </v-col>
-
-              <v-col v-if="productosFiltrados.length === 0" cols="12">
-                <v-alert type="info">
-                  No hay productos que coincidan
-                </v-alert>
               </v-col>
 
             </v-row>
@@ -158,16 +160,22 @@
 
                 <v-card class="pa-4 product-card" outlined>
 
+                  <v-img
+                    :src="item.img"
+                    height="140"
+                    contain
+                  />
+
                   <div class="text-subtitle-1 font-weight-medium">
-                    {{ item.nombre }}
+                    {{ item.name }}
                   </div>
 
                   <div class="text-caption grey--text mb-2">
-                    {{ item.variedad }}
+                    {{ item.weight }}
                   </div>
 
                   <div class="text-h6 font-weight-bold mb-3">
-                    ${{ item.precio }}
+                    ${{ item.price }}
                   </div>
 
                   <div class="d-flex align-center justify-space-between">
@@ -208,35 +216,30 @@
 
           </v-card>
 
-          <!-- CLIENTES -->
-          <v-card flat color="#FAFAFA" class="mt-10 py-5 px-16">
-
-            <div style="position:absolute;margin-left:auto;margin-right:auto;left:0;right:0;text-align:center;">
-              <h3>What Our Clients Say</h3>
-            </div>
-
-            <Client />
-
-          </v-card>
-
-          <!-- PARTNERS -->
-          <v-toolbar flat color="transparent" class="mt-8">
-            <v-toolbar-title class="text-h6">
-              Our Trusted Partner
-            </v-toolbar-title>
-          </v-toolbar>
-
+          <Client />
           <Partner />
 
         </v-col>
       </v-row>
     </v-container>
 
+    <!-- MODAL -->
+    <v-dialog v-model="dialog" max-width="400">
+      <v-card class="pa-6 text-center" color="#e8f5e9" outlined>
+        <v-icon size="64" color="green">mdi-check-circle</v-icon>
+        <h2 class="mt-4">{{ dialogMessage }}</h2>
+        <v-btn color="green" class="mt-4" @click="dialog = false">
+          Cerrar
+        </v-btn>
+      </v-card>
+    </v-dialog>
+
     <Footer/>
   </v-app>
 </template>
 
 <script>
+
 import Navbar from "../components/Navbar"
 import Footer from "../components/Footer"
 import Category from "../components/Category.vue"
@@ -259,7 +262,9 @@ export default {
     return{
       toggle_exclusive:1,
       busqueda:"",
-      productos:[]
+      productos:[],
+      dialog:false,
+      dialogMessage:""
     }
   },
 
@@ -276,15 +281,18 @@ export default {
       if(!texto) return []
 
       return this.productos.filter(p =>
-        (p.nombre || "").toLowerCase().includes(texto) ||
-        (p.variedad || "").toLowerCase().includes(texto)
+        (p.name || "").toLowerCase().includes(texto) ||
+        (p.weight || "").toLowerCase().includes(texto)
       )
+
     },
 
     productosRandom(){
+
       return [...this.productos]
         .sort(() => Math.random() - 0.5)
         .slice(0,12)
+
     }
 
   },
@@ -301,13 +309,14 @@ export default {
 
         const data = await response.json()
 
-        this.productos = data.map(p => ({
-          id:p.id,
-          nombre:p.nombre || "",
-          variedad:p.variedad || "",
-          precio:p.precio || 0,
-          stock:p.stock || 10,
-          qty:1
+        this.productos = data.map(product => ({
+          id:product.id,
+          name:product.nombre,
+          weight:product.variedad || "Sin variedad",
+          price:product.precio,
+          stock:product.stock || 0,
+          qty:1,
+          img: product.imagen ? `/${product.imagen}` : "/default.webp"
         }))
 
       }catch(error){
@@ -319,6 +328,8 @@ export default {
     increase(item){
       if(item.qty < item.stock){
         item.qty++
+      }else{
+        alert("No hay más stock disponible")
       }
     },
 
@@ -332,16 +343,22 @@ export default {
 
       try{
 
-        await fetch("http://localhost:8081/api/carrito/agregar",{
+        const response = await fetch("http://localhost:8081/api/carrito/agregar",{
           method:"POST",
           headers:{
             "Content-Type":"application/x-www-form-urlencoded"
           },
           body:new URLSearchParams({
-            nombre:item.nombre,
+            nombre:item.name,
             cantidad:item.qty
           })
         })
+
+        if(!response.ok) throw new Error("Error agregando al carrito")
+
+        this.dialogMessage = "🛒 Producto agregado al carrito"
+        this.dialog = true
+        item.qty = 1
 
       }catch(error){
         console.error("Error carrito", error)
@@ -356,8 +373,27 @@ export default {
       const existe = wishlist.find(p => p.id === item.id)
 
       if(!existe){
-        wishlist.push(item)
+
+        const producto = {
+          id:item.id,
+          name:item.name,
+          price:item.price,
+          weight:item.weight,
+          img:item.img
+        }
+
+        wishlist.push(producto)
+
         localStorage.setItem("wishlist", JSON.stringify(wishlist))
+
+        this.dialogMessage = "❤️ Producto agregado a wishlist"
+        this.dialog = true
+
+      }else{
+
+        this.dialogMessage = "❤️ Este producto ya está en tu wishlist"
+        this.dialog = true
+
       }
 
     }
@@ -389,3 +425,4 @@ export default {
 }
 
 </style>
+```

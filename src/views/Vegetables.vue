@@ -217,8 +217,7 @@ export default {
           price:product.precio,
           stock:product.stock || 0,
           qty:1,
-          img:product.imagen || "/default.webp"
-        }))
+          img: product.imagen ? `/${product.imagen}` : "/default.webp"        }))
 
       }catch(error){
         console.error(error)
