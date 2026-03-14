@@ -1,5 +1,5 @@
 package com.tuapp.grocery_backend.model;
-import com.tuapp.grocery_backend.model.Producto;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -23,35 +23,73 @@ public class Producto {
 
     private Boolean activo;
 
+    private String imagen; // campo agregado
+
     public Producto() {}
 
     // Getters y Setters
 
-    public Long getId() { return id; }
+    public Long getId() { 
+        return id; 
+    }
 
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) { 
+        this.id = id; 
+    }
 
-    public String getNombre() { return nombre; }
+    public String getNombre() { 
+        return nombre; 
+    }
 
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setNombre(String nombre) { 
+        this.nombre = nombre; 
+    }
 
-    public String getVariedad() { return variedad; }
+    public String getVariedad() { 
+        return variedad; 
+    }
 
-    public void setVariedad(String variedad) { this.variedad = variedad; }
+    public void setVariedad(String variedad) { 
+        this.variedad = variedad; 
+    }
 
-    public Double getPrecio() { return precio; }
+    public Double getPrecio() { 
+        return precio; 
+    }
 
-    public void setPrecio(Double precio) { this.precio = precio; }
+    public void setPrecio(Double precio) { 
+        this.precio = precio; 
+    }
 
-    public Integer getStock() { return stock; }
+    public Integer getStock() { 
+        return stock; 
+    }
 
-    public void setStock(Integer stock) { this.stock = stock; }
+    public void setStock(Integer stock) { 
+        this.stock = stock; 
+    }
 
-    public Long getCategoriaId() { return categoriaId; }
+    public Long getCategoriaId() { 
+        return categoriaId; 
+    }
 
-    public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
+    public void setCategoriaId(Long categoriaId) { 
+        this.categoriaId = categoriaId; 
+    }
 
-    public Boolean getActivo() { return activo; }
+    public Boolean getActivo() { 
+        return activo; 
+    }
 
-    public void setActivo(Boolean activo) { this.activo = activo; }
+    public void setActivo(Boolean activo) { 
+        this.activo = activo; 
+    }
+
+    public String getImagen() { 
+        return imagen; 
+    }
+
+    public void setImagen(String imagen) { 
+        this.imagen = imagen; 
+    }
 }
