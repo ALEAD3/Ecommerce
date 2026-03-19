@@ -1,3 +1,4 @@
+com/tuapp/grocery_backend/config/CorsConfig.class
 com/tuapp/grocery_backend/dto/ChatResponse.class
 com/tuapp/grocery_backend/dto/ChatRequest.class
 com/tuapp/grocery_backend/tools/ProductoTool.class

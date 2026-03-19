@@ -7,6 +7,7 @@
 /home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/repository/ProductoRepository.java
 /home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/dto/ChatRequest.java
 /home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/controller/ChatController.java
+/home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/config/CorsConfig.java
 /home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/GroceryBackendApplication.java
 /home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/dto/ChatResponse.java
 /home/areli/VisualCode/Vuejs---Vuetify-JS-How-to-create-a-Responsive-E-Grocery-Website-System-Grocery-e-Commerce-Website-main/grocery-backend/src/main/java/com/tuapp/grocery_backend/service/CarritoService.java
