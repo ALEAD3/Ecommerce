@@ -1,7 +1,7 @@
 <template>
-<v-avatar size="40">
-  <v-img :src="usuario.imagen || 'https://i.pravatar.cc/150'" />
-</v-avatar>
+  <v-avatar size="40">
+    <v-img :src="usuario.imagen || 'https://i.pravatar.cc/150'" />
+  </v-avatar>
 </template>
 
 <script>

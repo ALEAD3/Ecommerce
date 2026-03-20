@@ -41,18 +41,28 @@ const router = new VueRouter({
   routes
 });
 
-// 🔒 Guard para proteger rutas admin
+// 🔒 Guard global: protege TODAS las rutas excepto /login
 router.beforeEach((to, from, next) => {
   const usuario = store.state.usuario || JSON.parse(localStorage.getItem("user"));
 
+  // Si NO hay usuario logueado y no es login → redirigir a login
+  if (!usuario && to.path !== "/login") {
+    return next("/login");
+  }
+
+  // Bloquear login si ya está logueado
+  if (to.path === "/login" && usuario) {
+    return next(usuario.rol === "admin" ? "/admin" : "/");
+  }
+
+  // Proteger rutas admin
   if (to.matched.some(record => record.meta.requiresAdmin)) {
-    if (!usuario || usuario.rol !== "admin") {
-      // Redirige al dashboard o home si no es admin
-      return next("/"); 
+    if (usuario.rol !== "admin") {
+      return next("/"); // no es admin → redirigir a home (usuario normal)
     }
   }
 
-  next();
+  next(); // todo ok
 });
 
 export default router;

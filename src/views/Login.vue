@@ -27,7 +27,7 @@
         dense
       />
 
-      <!-- Botón -->
+      <!-- Botón Login -->
       <v-btn
         color="green"
         block
@@ -37,6 +37,11 @@
         @click="login"
       >
         Entrar
+      </v-btn>
+
+      <!-- Botón Registro -->
+      <v-btn text color="green" @click="mostrarRegistro = true">
+        Crear cuenta
       </v-btn>
 
       <!-- Mensajes -->
@@ -61,6 +66,35 @@
       </v-alert>
 
     </v-card>
+
+    <!-- Dialogo Registro -->
+    <v-dialog v-model="mostrarRegistro" max-width="400">
+      <v-card>
+        <v-card-title>Crear Nueva Cuenta</v-card-title>
+        <v-card-text>
+          <v-text-field v-model="nuevoUsuario.nombre" label="Nombre" />
+          <v-text-field v-model="nuevoUsuario.email" label="Correo" />
+          <v-text-field v-model="nuevoUsuario.password" label="Contraseña" type="password" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text color="grey" @click="mostrarRegistro = false">Cancelar</v-btn>
+          <v-btn color="green" @click="registrarUsuario">Registrarse</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ✅ MODAL IGUAL QUE VEGETABLES -->
+    <v-dialog v-model="dialog" max-width="400">
+      <v-card class="pa-6 text-center" color="#e8f5e9" outlined>
+        <v-icon size="64" color="green">mdi-check-circle</v-icon>
+        <h2 class="mt-4">{{ dialogMessage }}</h2>
+        <v-btn color="green" class="mt-4" @click="dialog = false">
+          Cerrar
+        </v-btn>
+      </v-card>
+    </v-dialog>
+
   </v-container>
 </template>
 
@@ -75,19 +109,20 @@ export default {
       showPassword: false,
       loading: false,
       errorMessage: "",
-      successMessage: ""
+      successMessage: "",
+      mostrarRegistro: false,
+      nuevoUsuario: { nombre: "", email: "", password: "" },
+
+      // ✅ NUEVO (modal tipo vegetables)
+      dialog: false,
+      dialogMessage: ""
     };
   },
   methods: {
-    // Función de redirección según rol
+    // Redirige según rol
     redirectUser(rol) {
-      if (rol === "admin") {
-        this.$router.push("/admin");
-      } else if (rol === "cliente") {
-        this.$router.push("/"); // Home para cliente
-      } else {
-        this.$router.push("/");
-      }
+      if (rol === "admin") this.$router.push("/admin");
+      else this.$router.push("/");
     },
 
     // Login
@@ -116,12 +151,9 @@ export default {
           return;
         }
 
-        // Guardar usuario en Vuex y localStorage
         store.dispatch("login", data.user);
 
         this.successMessage = "Login correcto!";
-
-        // Redirección según rol
         setTimeout(() => this.redirectUser(data.user.rol), 500);
 
       } catch (err) {
@@ -130,15 +162,47 @@ export default {
       } finally {
         this.loading = false;
       }
-    }
-  },
-  mounted() {
-    // Si ya hay usuario logueado, cargarlo y redirigir según rol
-    const user = localStorage.getItem("user");
-    if (user) {
-      const parsedUser = JSON.parse(user);
-      store.dispatch("login", parsedUser);
-      this.redirectUser(parsedUser.rol);
+    },
+
+    // ✅ REGISTRO CON MODAL
+    async registrarUsuario() {
+      if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.email || !this.nuevoUsuario.password) {
+        this.dialogMessage = "⚠️ Completa todos los campos";
+        this.dialog = true;
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:8081/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(this.nuevoUsuario)
+        });
+
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          data = {};
+        }
+
+        if (!res.ok) {
+          const msg = data.message || `Error creando usuario: ${res.status}`;
+          throw new Error(msg);
+        }
+
+        // ✅ MENSAJE BONITO
+        this.dialogMessage = "👤 Usuario creado con éxito";
+        this.dialog = true;
+
+        this.mostrarRegistro = false;
+        this.nuevoUsuario = { nombre: "", email: "", password: "" };
+
+      } catch (err) {
+        console.error(err);
+        this.dialogMessage = "❌ " + (err.message || "Error creando usuario");
+        this.dialog = true;
+      }
     }
   }
 };

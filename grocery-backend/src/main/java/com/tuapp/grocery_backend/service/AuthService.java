@@ -18,6 +18,7 @@ public class AuthService {
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
+    // LOGIN
     public Optional<Usuario> login(String email, String rawPassword) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
         if (usuarioOpt.isPresent()) {
@@ -29,9 +30,25 @@ public class AuthService {
         return Optional.empty();
     }
 
+    // REGISTRO sin validar email
     public Usuario registrar(Usuario usuario, String rawPassword) {
+        // Encriptar contraseña
         usuario.setPassword(passwordEncoder.encode(rawPassword));
-        usuario.setFechaCreacion(new java.sql.Timestamp(System.currentTimeMillis())); // <--- aquí
+
+        // Fecha de creación
+        usuario.setFechaCreacion(new java.sql.Timestamp(System.currentTimeMillis()));
+
+        // Rol por defecto
+        if (usuario.getRol() == null || usuario.getRol().isEmpty()) {
+            usuario.setRol("cliente");
+        }
+
+        // Imagen por defecto
+        if (usuario.getImagen() == null || usuario.getImagen().isEmpty()) {
+            usuario.setImagen("https://www.iml.es/wp-content/uploads/2023/11/tratamiento-suavizar-arrugas-en-hombres-iml.jpg");
+        }
+
+        // Guardar en BD
         return usuarioRepository.save(usuario);
     }
 }
