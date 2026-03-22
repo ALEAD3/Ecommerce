@@ -4,7 +4,7 @@
     <h1 class="mb-6">📦 Mis Pedidos</h1>
 
     <v-alert v-if="!pedidos.length" type="info">
-      No tienes pedidos todavía
+      No tienes pedidos
     </v-alert>
 
     <v-card
@@ -14,26 +14,21 @@
       outlined
     >
 
-      <!-- HEADER -->
       <div class="d-flex justify-space-between">
-
         <div>
           <strong>Pedido #{{ pedido.id }}</strong>
-
           <div class="grey--text text-caption">
             {{ new Date(pedido.fecha).toLocaleDateString() }}
           </div>
         </div>
 
         <v-chip color="orange" dark>
-          🚚 En proceso de envío
+          En proceso
         </v-chip>
-
       </div>
 
-      <!-- 📍 UBICACIÓN -->
       <div class="mt-2 grey--text text-caption">
-        📍 <b>Envío a:</b> {{ pedido.direccion || "Sin dirección" }}
+        📍 {{ pedido.direccion }}
       </div>
 
       <v-divider class="my-3"></v-divider>
@@ -41,19 +36,13 @@
       <!-- PRODUCTOS -->
       <div
         v-for="prod in pedido.productos"
-        :key="prod.nombre"
+        :key="prod.nombre + prod.variedad"
         class="d-flex justify-space-between"
       >
-
-        <span>{{ prod.nombre }} x{{ prod.cantidad }}</span>
-
-        <span>
-          ${{ (prod.precio * prod.cantidad).toFixed(2) }}
-        </span>
-
+        <span>{{ prod.nombre }} ({{ prod.variedad }}) x{{ prod.cantidad }}</span>
+        <span>${{ (prod.precio * prod.cantidad).toFixed(2) }}</span>
       </div>
 
-      <!-- TOTAL -->
       <v-divider class="my-2"></v-divider>
 
       <div class="d-flex justify-space-between font-weight-bold">
@@ -69,8 +58,6 @@
 <script>
 export default{
 
-  name:"Pedidos",
-
   data(){
     return{
       pedidos:[]
@@ -85,27 +72,30 @@ export default{
 
     async cargarPedidos(){
 
+      const user = JSON.parse(localStorage.getItem("user"))
+      if(!user) return
+
+      const usuario = user.id || user.email
+
       try{
 
-        const res = await fetch("http://localhost:8081/api/pedidos")
+        const res = await fetch(`http://localhost:8081/api/pedidos?usuario=${usuario}`)
 
-        if(!res.ok) throw new Error("Error cargando pedidos")
+        if(!res.ok) throw new Error()
 
         this.pedidos = await res.json()
 
       }catch(e){
         console.error(e)
       }
-
     },
 
     calcularTotal(pedido){
       return pedido.productos
-        .reduce((acc,p) => acc + (p.precio * p.cantidad),0)
+        .reduce((acc,p)=> acc + (p.precio * p.cantidad),0)
         .toFixed(2)
     }
 
   }
-
 }
 </script>

@@ -118,19 +118,15 @@ export default {
     const currentYear = new Date().getFullYear() % 100;
 
     return {
-      // 📍 Dirección
       direccion: "",
       ciudad: "",
       cp: "",
       telefono: "",
-
-      // 💳 Pago
       tarjeta: "",
       mes: "",
       anio: "",
       titular: "",
       cvv: "",
-
       guardar: false,
       valido: false,
       currentYear
@@ -139,7 +135,6 @@ export default {
 
   methods: {
 
-    // 📍 VALIDACIONES
     direccionValida(v) {
       return !!v || "La dirección es obligatoria";
     },
@@ -156,7 +151,6 @@ export default {
       return /^\d{10}$/.test(v) || "Teléfono inválido";
     },
 
-    // 💳 VALIDACIONES
     tarjetaValida(v) {
       return /^\d{16}$/.test(v.replace(/\s/g, "")) || "Número inválido";
     },
@@ -168,7 +162,7 @@ export default {
 
     anioValido(v) {
       const a = parseInt(v);
-      return (a >= this.currentYear) || `Año inválido`;
+      return (a >= this.currentYear) || "Año inválido";
     },
 
     titularValido(v) {
@@ -181,11 +175,20 @@ export default {
 
     async pagar() {
 
-      if (!this.$refs.form.validate()) return;
+      if (!this.$refs.form || !this.$refs.form.validate()) return;
+
+      const user = JSON.parse(localStorage.getItem("user"))
+
+      if(!user){
+        alert("Debes iniciar sesión")
+        return
+      }
+
+      const usuario = user.id || user.email
 
       try {
 
-        const carritoRes = await fetch("http://localhost:8081/api/carrito");
+        const carritoRes = await fetch(`http://localhost:8081/api/carrito?usuario=${usuario}`)
         const productosCarrito = await carritoRes.json();
 
         if (!productosCarrito.length) {
@@ -193,8 +196,10 @@ export default {
           return;
         }
 
+        // 🔥 FIX IMPORTANTE (agregar variedad)
         const productos = productosCarrito.map(p => ({
           nombre: p.nombre,
+          variedad: p.variedad,
           precio: p.precio,
           cantidad: p.cantidad
         }));
@@ -206,13 +211,13 @@ export default {
           },
           body: JSON.stringify({
 
-            // 📍 ENVÍO
+            usuario,
+
             direccion: this.direccion,
             ciudad: this.ciudad,
             codigoPostal: this.cp,
             telefono: this.telefono,
 
-            // 💳 PAGO
             tarjeta: this.tarjeta,
             titular: this.titular,
             mes: this.mes,
@@ -221,13 +226,13 @@ export default {
 
             estado: "EN_PROCESO",
             fecha: new Date(),
-            productos: productos
+            productos
           })
         });
 
         if (!pedidoRes.ok) throw new Error();
 
-        await fetch("http://localhost:8081/api/carrito", {
+        await fetch(`http://localhost:8081/api/carrito?usuario=${usuario}`, {
           method: "DELETE"
         });
 
@@ -237,9 +242,7 @@ export default {
         console.error(error);
         alert("Error al procesar el pago");
       }
-
     }
-
   }
 };
 </script>

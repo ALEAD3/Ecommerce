@@ -45,8 +45,7 @@ public class CarritoTool {
         }
 
         // Agregar al carrito
-        carritoService.agregar(p, cantidad);
-
+        carritoService.agregar(p, cantidad, "tool");
         return cantidad + " unidades de " + p.getNombre() + " fueron agregadas al carrito.";
     }
 }

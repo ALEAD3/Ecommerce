@@ -127,43 +127,44 @@ export default {
 
     // Login
     async login() {
-      this.errorMessage = "";
-      this.successMessage = "";
-      this.loading = true;
+  this.errorMessage = "";
+  this.successMessage = "";
+  this.loading = true;
 
-      if (!this.email || !this.password) {
-        this.errorMessage = "Ingresa correo y contraseña";
-        this.loading = false;
-        return;
-      }
+  if (!this.email || !this.password) {
+    this.errorMessage = "Ingresa correo y contraseña";
+    this.loading = false;
+    return;
+  }
 
-      try {
-        const res = await fetch("http://localhost:8081/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: this.email, password: this.password })
-        });
+  try {
+    const res = await fetch("http://localhost:8081/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: this.email, password: this.password })
+    });
 
-        const data = await res.json();
+    const data = await res.json();
 
-        if (!res.ok) {
-          this.errorMessage = data.message || "Correo o contraseña incorrectos";
-          return;
-        }
+    if (!res.ok) {
+      this.errorMessage = data.message || "Correo o contraseña incorrectos";
+      return;
+    }
 
-        store.dispatch("login", data.user);
+    // ✅ AQUÍ ES DONDE VA (después del login correcto)
+    store.dispatch("login", data.user);
+    localStorage.setItem("user", JSON.stringify(data.user));
 
-        this.successMessage = "Login correcto!";
-        setTimeout(() => this.redirectUser(data.user.rol), 500);
+    this.successMessage = "Login correcto!";
+    setTimeout(() => this.redirectUser(data.user.rol), 500);
 
-      } catch (err) {
-        console.error(err);
-        this.errorMessage = "Error de conexión con el servidor";
-      } finally {
-        this.loading = false;
-      }
-    },
-
+  } catch (err) {
+    console.error(err);
+    this.errorMessage = "Error de conexión con el servidor";
+  } finally {
+    this.loading = false;
+  }
+},
     // ✅ REGISTRO CON MODAL
     async registrarUsuario() {
       if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.email || !this.nuevoUsuario.password) {

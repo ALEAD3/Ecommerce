@@ -86,11 +86,15 @@ export default {
       const user = this.$store.state.usuario || JSON.parse(localStorage.getItem("user"));
       this.usuario = user || { nombre: "Invitado", email: "" };
     },
-    logout() {
-      this.$store.commit("logout");
-      this.menu = false;
-      this.$router.push("/login");
-    }
+   logout() {
+  this.$store.commit("logout")
+
+  // 🔥 Limpia usuario actual
+  localStorage.removeItem("user")
+
+  this.menu = false
+  this.$router.push("/login")
+}
   }
 };
 </script>

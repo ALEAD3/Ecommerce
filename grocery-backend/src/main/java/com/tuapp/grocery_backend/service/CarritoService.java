@@ -11,44 +11,76 @@ public class CarritoService {
 
     private final ProductoRepository productoRepository;
 
-    // Carrito en memoria
-    private final List<Map<String, Object>> carrito = new ArrayList<>();
+    private final Map<String, List<Map<String, Object>>> carritos = new HashMap<>();
 
     public CarritoService(ProductoRepository productoRepository) {
         this.productoRepository = productoRepository;
     }
 
-    public void agregar(Producto producto, int cantidad) {
+    private List<Map<String, Object>> getCarrito(String usuario) {
+        return carritos.computeIfAbsent(usuario, k -> new ArrayList<>());
+    }
 
+    // ✅ AGREGAR
+    public void agregar(Producto producto, int cantidad, String usuario) {
+
+        if (producto == null) return;
         if (producto.getStock() < cantidad) return;
 
-        producto.setStock(producto.getStock() - cantidad);
-        productoRepository.save(producto);
+        List<Map<String, Object>> carrito = getCarrito(usuario);
+
+        for (Map<String, Object> item : carrito) {
+
+            Long id = ((Number) item.get("id")).longValue();
+            String variedad = (String) item.get("variedad");
+
+            if (id.equals(producto.getId()) &&
+                variedad.equalsIgnoreCase(producto.getVariedad())) {
+
+                int nuevaCantidad = (int) item.get("cantidad") + cantidad;
+
+                item.put("cantidad", nuevaCantidad);
+                item.put("subtotal", producto.getPrecio() * nuevaCantidad);
+
+                producto.setStock(producto.getStock() - cantidad);
+                productoRepository.save(producto);
+                return;
+            }
+        }
 
         Map<String, Object> item = new HashMap<>();
-        item.put("id", producto.getId()); // 👈 SOLO ESTA LINEA NUEVA
+        item.put("id", producto.getId());
         item.put("nombre", producto.getNombre());
+        item.put("variedad", producto.getVariedad());
         item.put("precio", producto.getPrecio());
         item.put("cantidad", cantidad);
         item.put("subtotal", producto.getPrecio() * cantidad);
-        
+
         carrito.add(item);
+
+        producto.setStock(producto.getStock() - cantidad);
+        productoRepository.save(producto);
     }
 
-    public List<Map<String, Object>> obtenerCarrito() {
-        return carrito;
+    public List<Map<String, Object>> obtenerCarrito(String usuario) {
+        return getCarrito(usuario);
     }
 
-    public double obtenerTotal() {
-        return carrito.stream()
-                .mapToDouble(item -> (double) item.get("subtotal"))
+    public double obtenerTotal(String usuario) {
+        return getCarrito(usuario).stream()
+                .mapToDouble(item -> ((Number) item.get("subtotal")).doubleValue())
                 .sum();
     }
 
-    public void vaciarCarrito() {
-        carrito.clear();
-    }
-    public void eliminarProducto(Long id) {
-    carrito.removeIf(item -> item.get("id").equals(id));
+    // ❌ ELIMINAR SOLO UNO (ID + VARIEDAD)
+    public void eliminarProducto(Long id, String variedad, String usuario) {
+    getCarrito(usuario).removeIf(item ->
+            ((Number) item.get("id")).longValue() == id &&
+            ((String) item.get("variedad")).equalsIgnoreCase(variedad)
+    );
+}
+
+    public void vaciarCarrito(String usuario) {
+        getCarrito(usuario).clear();
     }
 }

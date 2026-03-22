@@ -1,10 +1,12 @@
 package com.tuapp.grocery_backend.controller;
 
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
+import com.tuapp.grocery_backend.model.Producto;
+import com.tuapp.grocery_backend.repository.ProductoRepository;
 import com.tuapp.grocery_backend.service.CarritoService;
-import com.tuapp.grocery_backend.tools.CarritoTool;
 
 @RestController
 @RequestMapping("/api/carrito")
@@ -12,43 +14,52 @@ import com.tuapp.grocery_backend.tools.CarritoTool;
 public class CarritoController {
 
     private final CarritoService carritoService;
-    private final CarritoTool carritoTool;
+    private final ProductoRepository productoRepository;
 
-    public CarritoController(CarritoService carritoService,
-                             CarritoTool carritoTool) {
+    public CarritoController(CarritoService carritoService, ProductoRepository productoRepository) {
         this.carritoService = carritoService;
-        this.carritoTool = carritoTool;
+        this.productoRepository = productoRepository;
     }
 
-    // Ver productos del carrito
-    @GetMapping
-    public List<Map<String, Object>> verCarrito() {
-        return carritoService.obtenerCarrito();
-    }
-
-    // Obtener total
-    @GetMapping("/total")
-    public double total() {
-        return carritoService.obtenerTotal();
-    }
-
-    // Vaciar carrito
-    @DeleteMapping
-    public void vaciar() {
-        carritoService.vaciarCarrito();
-    }
-
-    // Agregar producto (lo usa frontend y agente)
+    // 🛒 AGREGAR
     @PostMapping("/agregar")
-    public String agregarProducto(@RequestParam String nombre,
-                                  @RequestParam int cantidad) {
+    public void agregar(
+            @RequestParam String nombre,
+            @RequestParam String variedad, // 🔥 IMPORTANTE
+            @RequestParam int cantidad,
+            @RequestParam String usuario
+    ) {
+        Producto producto = productoRepository
+                .findByNombreIgnoreCaseAndVariedadIgnoreCase(nombre, variedad);
 
-        return carritoTool.agregarAlCarrito(nombre, cantidad);
-
+        carritoService.agregar(producto, cantidad, usuario);
     }
-    // Eliminar producto individual
-    @DeleteMapping("/{id}")
-    public void eliminarProducto(@PathVariable Long id) {
-        carritoService.eliminarProducto(id);
+
+    // 📦 OBTENER
+    @GetMapping
+    public List<Map<String, Object>> obtener(@RequestParam String usuario) {
+        return carritoService.obtenerCarrito(usuario);
+    }
+
+    // 💰 TOTAL
+    @GetMapping("/total")
+    public double total(@RequestParam String usuario) {
+        return carritoService.obtenerTotal(usuario);
+    }
+
+    // ❌ ELIMINAR SOLO UNO
+  @DeleteMapping("/{id}")
+public void eliminar(
+        @PathVariable Long id,
+        @RequestParam String variedad,
+        @RequestParam String usuario
+) {
+    carritoService.eliminarProducto(id, variedad, usuario);
+}
+
+    // 🧹 VACIAR
+    @DeleteMapping
+    public void vaciar(@RequestParam String usuario) {
+        carritoService.vaciarCarrito(usuario);
     }
 }

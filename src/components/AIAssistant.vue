@@ -58,47 +58,65 @@ export default {
 
   methods: {
     async sendMessage() {
-      if (!this.input) return;
 
-      const userMessage = this.input;
+  if (!this.input.trim()) return;
 
-      // Muestra el mensaje del usuario en el chat
-      this.messages.push({
-        role: "Usuario",
-        text: userMessage
-      });
+  const user = JSON.parse(localStorage.getItem("user"))
 
-      this.input = "";
+  if(!user){
+    this.messages.push({
+      role: "Sistema",
+      text: "⚠️ Debes iniciar sesión"
+    })
+    return
+  }
 
-      try {
-        const response = await fetch("http://localhost:8081/api/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ message: userMessage })
-        });
+  const userMessage = this.input;
 
-        const data = await response.json(); // parseamos JSON
-        this.messages.push({
-          role: "Agente",
-          text: data.reply
-        });
+  // mensaje usuario
+  this.messages.push({
+    role: "Usuario",
+    text: userMessage
+  });
 
-        // Auto-scroll al final del chat
-        this.$nextTick(() => {
-          const chatBox = this.$refs.chatBox;
-          if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-        });
+  this.input = "";
 
-      } catch (error) {
-        console.error("Error:", error);
-        this.messages.push({
-          role: "Sistema",
-          text: "No se pudo conectar con el agente."
-        });
-      }
-    }
+  try {
+
+    const response = await fetch("http://localhost:8081/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        usuario: user.id || user.email // 🔥 CLAVE
+      })
+    });
+
+    // 🔥 IMPORTANTE: leer como texto
+   const data = await response.json();
+
+this.messages.push({
+  role: "Agente",
+  text: data.reply
+});
+
+    // scroll automático
+    this.$nextTick(() => {
+      const chatBox = this.$refs.chatBox;
+      if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+
+    this.messages.push({
+      role: "Sistema",
+      text: "❌ Error conectando con el servidor"
+    });
+  }
+}
   } // <-- Cierra methods
 }; // <-- Cierra export default
 </script>

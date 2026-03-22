@@ -275,7 +275,6 @@ export default {
   computed:{
 
     productosFiltrados(){
-
       const texto = this.busqueda.trim().toLowerCase()
 
       if(!texto) return []
@@ -284,15 +283,12 @@ export default {
         (p.name || "").toLowerCase().includes(texto) ||
         (p.weight || "").toLowerCase().includes(texto)
       )
-
     },
 
     productosRandom(){
-
       return [...this.productos]
         .sort(() => Math.random() - 0.5)
         .slice(0,12)
-
     }
 
   },
@@ -300,11 +296,8 @@ export default {
   methods:{
 
     async cargarProductos(){
-
       try{
-
         const response = await fetch("http://localhost:8081/api/productos")
-
         if(!response.ok) throw new Error("Error API")
 
         const data = await response.json()
@@ -316,12 +309,12 @@ export default {
           price:product.precio,
           stock:product.stock || 0,
           qty:1,
-          img: product.imagen || "/default.webp"        }))
+          img: product.imagen || "/default.webp"
+        }))
 
       }catch(error){
         console.error("Error cargando productos:", error)
       }
-
     },
 
     increase(item){
@@ -338,19 +331,29 @@ export default {
       }
     },
 
+    // ✅ CARRITO CORREGIDO
     async addToCart(item){
 
-      try{
+      const user = JSON.parse(localStorage.getItem("user"))
 
+      if(!user){
+        this.dialogMessage = "⚠️ Debes iniciar sesión"
+        this.dialog = true
+        return
+      }
+
+      try{
         const response = await fetch("http://localhost:8081/api/carrito/agregar",{
           method:"POST",
           headers:{
             "Content-Type":"application/x-www-form-urlencoded"
           },
           body:new URLSearchParams({
-            nombre:item.name,
-            cantidad:item.qty
-          })
+  nombre: item.name,
+  variedad: item.weight,   // 🔥 IMPORTANTE
+  cantidad: item.qty,
+  usuario: user.id || user.email
+})
         })
 
         if(!response.ok) throw new Error("Error agregando al carrito")
@@ -362,41 +365,43 @@ export default {
       }catch(error){
         console.error("Error carrito", error)
       }
-
     },
 
-    addToWishlist(item){
+   addToWishlist(item){
 
-      let wishlist = JSON.parse(localStorage.getItem("wishlist")) || []
+  const user = JSON.parse(localStorage.getItem("user"))
 
-      const existe = wishlist.find(p => p.id === item.id)
+  if(!user){
+    this.dialogMessage = "⚠️ Debes iniciar sesión"
+    this.dialog = true
+    return
+  }
 
-      if(!existe){
+  const key = `wishlist_${user.id || user.email}`
 
-        const producto = {
-          id:item.id,
-          name:item.name,
-          price:item.price,
-          weight:item.weight,
-          img:item.img
-        }
+  let wishlist = JSON.parse(localStorage.getItem(key)) || []
 
-        wishlist.push(producto)
+  const existe = wishlist.find(p => p.id === item.id)
 
-        localStorage.setItem("wishlist", JSON.stringify(wishlist))
+  if(!existe){
 
-        this.dialogMessage = "❤️ Producto agregado a wishlist"
-        this.dialog = true
+    wishlist.push({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      weight: item.weight,
+      img: item.img
+    })
 
-      }else{
+    localStorage.setItem(key, JSON.stringify(wishlist))
 
-        this.dialogMessage = "❤️ Este producto ya está en tu wishlist"
-        this.dialog = true
+    this.dialogMessage = "❤️ Producto agregado a wishlist"
+  }else{
+    this.dialogMessage = "❤️ Este producto ya está en tu wishlist"
+  }
 
-      }
-
-    }
-
+  this.dialog = true
+}
   }
 
 }

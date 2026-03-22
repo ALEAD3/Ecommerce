@@ -9,13 +9,17 @@ import com.tuapp.grocery_backend.dto.ChatResponse;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:8080") // <-- frontend
+@CrossOrigin(origins = "http://localhost:8080")
 public class ChatController {
+
     private final AssistantService assistantService;
 
     @PostMapping("/chat")
     public ChatResponse chat(@RequestBody ChatRequest request) {
-        String reply = assistantService.chat(request.getMessage());
+        String reply = assistantService.chat(
+            request.getMessage(),
+            request.getUsuario()
+        );
         return new ChatResponse(reply);
     }
 }

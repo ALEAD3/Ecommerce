@@ -4,8 +4,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.*;
+import java.text.Normalizer;
 
 import com.tuapp.grocery_backend.model.Producto;
 import com.tuapp.grocery_backend.repository.ProductoRepository;
@@ -19,55 +20,65 @@ public class AssistantService {
     @Autowired
     private CarritoService carritoService;
 
-    // =========================
-    // Guardar el producto pendiente para agregar
-    // =========================
-    private Producto productoPendiente = null;
+    private Map<String, Producto> productoPendienteMap = new ConcurrentHashMap<>();
 
-    public String chat(String message) {
+    // =========================
+    // CHAT PRINCIPAL
+    // =========================
+    public String chat(String message, String usuario) {
+
+        if (usuario == null || usuario.isBlank()) {
+            return "⚠️ Usuario no identificado";
+        }
 
         if (message == null || message.isBlank()) {
-            return "¿Podrías escribir tu consulta nuevamente? 😊";
+            return "¿Puedes escribirlo otra vez? 😊";
         }
 
-        String msg = message.toLowerCase().trim();
+        String msgOriginal = message;
+        String msg = normalizar(message);
+
         List<Producto> productos = productoRepository.findAll();
 
-        // ===== SALUDOS =====
+        // 🔥 FIX LAMBDA (variable final)
+        final String msgFinal = msg;
+
+        productos.sort((a, b) -> Integer.compare(
+                scoreProducto(msgFinal, b),
+                scoreProducto(msgFinal, a)
+        ));
+
+        // ===== SALUDO =====
         if (msg.matches(".*\\b(hola|buenas|hey|hi|hello)\\b.*")) {
-            return "¡Hola! 👋 Soy tu asistente virtual. Puedes preguntarme por productos o hacer pedidos.";
+            return "¡Hola! 👋 ¿Qué te gustaría comprar hoy? 🛒";
         }
 
-        // ===== LIMPIAR PALABRAS IRRELEVANTES =====
-        String[] stopWords = {"quiero", "dame", "agrega", "al", "carrito", "por favor", "vendeme"};
-        for (String w : stopWords) {
-            msg = msg.replace(w, "").trim();
+        // ===== DESPEDIDA / FINALIZAR ===== 🔥 FIX NUEVO
+        if (msg.matches(".*\\b(no|gracias|nada|eso es todo|ya no)\\b.*")) {
+            productoPendienteMap.remove(usuario);
+            return "¡Perfecto! 😊 Gracias por tu pedido 🛒";
         }
 
-        // ===== CONSULTA DE VARIEDADES =====
-        if (msg.matches(".*\\b(tipo|variedad|qué tipo)\\b.*")) {
+        msg = limpiarMensaje(msg);
+
+        // ===== VARIEDADES =====
+        if (msg.matches(".*\\b(tipo|variedad|que tipo|tipos|cuales)\\b.*")) {
 
             for (Producto p : productos) {
-
-                if (msg.contains(p.getNombre().toLowerCase())) {
+                if (msg.contains(normalizar(p.getNombre()))) {
 
                     List<Producto> encontrados =
                             productoRepository.findByNombreContainingIgnoreCase(p.getNombre());
 
                     if (encontrados == null || encontrados.isEmpty()) {
-                        return "No encontré variedades disponibles de " +
-                                capitalize(p.getNombre()) + ".";
+                        return "No encontré variedades de " + capitalize(p.getNombre());
                     }
 
-                    StringBuilder res = new StringBuilder();
-                    res.append("Tenemos las siguientes variedades de ")
-                       .append(capitalize(p.getNombre()))
-                       .append(":\n");
+                    StringBuilder res = new StringBuilder("Tenemos:\n");
 
                     for (Producto prod : encontrados) {
                         res.append("- ")
-                           .append(prod.getVariedad() != null ?
-                                   prod.getVariedad() : "Sin variedad")
+                           .append(prod.getVariedad())
                            .append(" ($")
                            .append(prod.getPrecio())
                            .append(")\n");
@@ -76,244 +87,212 @@ public class AssistantService {
                     return res.toString();
                 }
             }
-
-            return "No encontré el producto solicitado para consultar variedades.";
         }
 
-        // ===== SI HAY PRODUCTO PENDIENTE =====
-        if (productoPendiente != null) {
+        // ===== DISPONIBILIDAD =====
+        if (msg.matches(".*\\b(tienes|hay|vendes)\\b.*")) {
+
+            productoPendienteMap.remove(usuario);
+
+            for (Producto p : productos) {
+                if (coincideProducto(msg, p)) {
+                    return "Sí 😊 tenemos " + getNombre(p) + ". ¿Cuántos quieres?";
+                }
+            }
+
+            return "Ups 😕 no encontré ese producto";
+        }
+
+        // ===== PRODUCTO PENDIENTE =====
+        Producto pendiente = productoPendienteMap.get(usuario);
+
+        if (pendiente != null) {
 
             double cantidad = detectarCantidadNumero(msg);
 
             if (cantidad > 0) {
 
-                String displayName =
-                        productoPendiente.getVariedad() != null
-                                ? productoPendiente.getVariedad()
-                                : capitalize(productoPendiente.getNombre());
+                String res = agregarAlCarrito(pendiente, cantidad, getNombre(pendiente), usuario);
 
-                String resultado =
-                        agregarAlCarrito(productoPendiente, cantidad, displayName);
+                productoPendienteMap.remove(usuario);
 
-                productoPendiente = null;
-                return resultado;
-
-            } else {
-                return "Por favor, indica la cantidad que deseas agregar al carrito para "
-                        + (productoPendiente.getVariedad() != null
-                        ? productoPendiente.getVariedad()
-                        : capitalize(productoPendiente.getNombre()))
-                        + ".";
+                return res + " 🛒 ¿Quieres algo más?";
             }
+
+            return "Claro 😊 ¿cuántos quieres de " + getNombre(pendiente) + "?";
         }
 
-        // ==================================================
-        // ===== DETECCIÓN DE LISTA (CORREGIDA) ============
-        // ==================================================
+        // ===== LISTA =====
         if (msg.contains(",")) {
 
             String[] partes = msg.split(",");
-            StringBuilder respuestaFinal = new StringBuilder();
-            boolean agregado = false;
+            StringBuilder respuesta = new StringBuilder();
 
             for (String parte : partes) {
 
-                String fragmento = parte.trim();
+                String fragmento = normalizar(parte);
                 double cantidad = detectarCantidadNumero(fragmento);
 
                 if (cantidad <= 0) continue;
 
-                Producto productoEncontrado = null;
+                Producto p = buscarMejorProducto(fragmento, productos);
+                if (p == null) continue;
 
-                for (Producto p : productos) {
-                    if (p.getVariedad() != null &&
-                        fragmento.contains(p.getVariedad().toLowerCase())) {
-
-                        productoEncontrado = p;
-                        break;
-                    }
-                }
-
-                if (productoEncontrado == null) {
-                    for (Producto p : productos) {
-                        if (fragmento.contains(p.getNombre().toLowerCase())) {
-                            productoEncontrado = p;
-                            break;
-                        }
-                    }
-                }
-
-                if (productoEncontrado != null) {
-
-                    String displayName =
-                            productoEncontrado.getVariedad() != null
-                                    ? productoEncontrado.getVariedad()
-                                    : capitalize(productoEncontrado.getNombre());
-
-                    respuestaFinal.append(
-                            agregarAlCarrito(productoEncontrado, cantidad, displayName)
-                    ).append(" ");
-
-                    agregado = true;
-                }
+                respuesta.append(
+                        agregarAlCarrito(p, cantidad, getNombre(p), usuario)
+                ).append(" ");
             }
 
-            if (agregado) {
-                return respuestaFinal.toString();
+            if (!respuesta.isEmpty()) {
+                return respuesta.toString() + "🛒";
             }
         }
 
-        // ===== DETECCIÓN DE PRODUCTO INDIVIDUAL ==========
+        // ===== PRODUCTO INDIVIDUAL =====
         for (Producto p : productos) {
 
-            String nombreLower = p.getNombre().toLowerCase();
-            String variedadLower =
-                    p.getVariedad() != null
-                            ? p.getVariedad().toLowerCase()
-                            : "";
-
-            if (msg.contains(nombreLower) ||
-               (!variedadLower.isEmpty() &&
-                msg.contains(variedadLower))) {
+            if (coincideProducto(msg, p)) {
 
                 double cantidad = detectarCantidadNumero(msg);
 
                 if (cantidad > 0) {
-
-                    String displayName =
-                            p.getVariedad() != null
-                                    ? p.getVariedad()
-                                    : capitalize(p.getNombre());
-
-                    return agregarAlCarrito(p, cantidad, displayName);
+                    return agregarAlCarrito(p, cantidad, getNombre(p), usuario)
+                            + " 🛒 ¿Quieres algo más?";
                 }
 
-                productoPendiente = p;
+                productoPendienteMap.put(usuario, p);
 
-                return "Encontré "
-                        + (p.getVariedad() != null
-                        ? p.getVariedad()
-                        : capitalize(p.getNombre()))
-                        + ". Por favor, indica la cantidad que deseas agregar al carrito.";
+                return "Claro 😊 ¿cuántos quieres de " + getNombre(p) + "?";
             }
         }
 
-        // ===== VERIFICAR SI EL USUARIO INTENTA BUSCAR UN PRODUCTO =====
-
-        boolean pareceProducto = msg.length() > 2 && !msg.matches(".*\\b(hola|hi|hey|gracias|ok)\\b.*");
-
-        if (pareceErrorEscritura(msg)) {
-            return "No logré entender lo que escribiste 🤔 ¿Podrías corregirlo o escribirlo nuevamente?";
-        }
-
-        if (pareceProducto) {
-            return "Lo siento 😕, ese producto no está en nuestra base de datos.";
-        }
-
-        String[] respuestasFallback = {
-                "Hmm 🤔 no estoy seguro, ¿puedes reformularlo?",
-                "No entendí eso, pero podemos intentarlo de nuevo 😊",
-                "No estoy seguro de lo que buscas 🤔"
-        };
-
-        return respuestasFallback[
-                new Random().nextInt(respuestasFallback.length)
-        ];
+        return "No entendí bien 🤔 ¿puedes intentarlo diferente?";
     }
 
     // =========================
-    // DETECTAR ERROR DE ESCRITURA
+    // NORMALIZAR TEXTO
     // =========================
-    private boolean pareceErrorEscritura(String msg) {
+    private String normalizar(String texto) {
 
-        if (msg.matches(".*[bcdfghjklmnpqrstvwxyz]{5,}.*")) {
-            return true;
+        if (texto == null) return "";
+
+        texto = texto.toLowerCase().trim();
+
+        texto = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        texto = texto.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+
+        if (texto.endsWith("s")) {
+            texto = texto.substring(0, texto.length() - 1);
         }
 
-        if (!msg.matches("[a-záéíóúñ0-9\\s?]+")) {
-            return true;
+        return texto.replaceAll("\\s+", " ");
+    }
+
+    private String limpiarMensaje(String msg) {
+
+        String[] stopWords = {
+                "quiero", "dame", "agrega", "al", "carrito",
+                "por favor", "vendeme", "me das", "ponme"
+        };
+
+        for (String w : stopWords) {
+            msg = msg.replace(w, "").trim();
         }
+
+        return msg;
+    }
+
+    // =========================
+    // MATCH INTELIGENTE
+    // =========================
+    private boolean coincideProducto(String msg, Producto p) {
+
+        String nombre = normalizar(p.getNombre());
+        String variedad = p.getVariedad() != null ? normalizar(p.getVariedad()) : "";
+
+        if (!variedad.isEmpty() && msg.contains(nombre + " " + variedad)) return true;
+        if (!variedad.isEmpty() && msg.contains(variedad)) return true;
+        if (msg.contains(nombre)) return true;
 
         return false;
     }
 
-    // =========================
-    // AGREGAR AL CARRITO
-    // =========================
-    private String agregarAlCarrito(Producto p, double cantidad, String displayName) {
+    private Producto buscarMejorProducto(String msg, List<Producto> productos) {
+
+        Producto mejor = null;
+        int mejorScore = -1;
+
+        for (Producto p : productos) {
+            int score = scoreProducto(msg, p);
+
+            if (score > mejorScore) {
+                mejorScore = score;
+                mejor = p;
+            }
+        }
+
+        return mejor;
+    }
+
+    private int scoreProducto(String msg, Producto p) {
+
+        String nombre = normalizar(p.getNombre());
+        String variedad = p.getVariedad() != null ? normalizar(p.getVariedad()) : "";
+
+        int score = 0;
+
+        if (msg.contains(nombre + " " + variedad)) score += 5;
+        if (!variedad.isEmpty() && msg.contains(variedad)) score += 3;
+        if (msg.contains(nombre)) score += 1;
+
+        return score;
+    }
+
+    private String getNombre(Producto p) {
+        return (p.getVariedad() != null && !p.getVariedad().isBlank())
+                ? p.getVariedad()
+                : capitalize(p.getNombre());
+    }
+
+    private String agregarAlCarrito(Producto p, double cantidad, String nombre, String usuario) {
 
         int cantidadEntera = (int) Math.ceil(cantidad);
 
         if (p.getStock() == null || p.getStock() < cantidadEntera) {
 
             if (p.getStock() != null && p.getStock() > 0) {
-                carritoService.agregar(p, p.getStock());
-                return "Solo quedan " + p.getStock()
-                        + " unidad(es) de " + displayName
-                        + ", las agregué al carrito 📦";
+                carritoService.agregar(p, p.getStock(), usuario);
+                return "Solo quedan " + p.getStock() + " de " + nombre + " 😮";
             }
 
-            return "No hay suficiente stock de " + displayName + " 📦";
+            return "Ups 😕 por ahora no tenemos " + nombre;
         }
 
-        carritoService.agregar(p, cantidadEntera);
+        carritoService.agregar(p, cantidadEntera, usuario);
 
-        return "Perfecto 🙌 Agregué "
-                + cantidad
-                + " unidad(es)/kilo(s) de "
-                + displayName
-                + " al carrito.";
+        return "Perfecto 👍 agregué " + cantidad + " de " + nombre;
     }
 
-    // =========================
-    // DETECTAR CANTIDAD
-    // =========================
     private double detectarCantidadNumero(String msg) {
 
-        msg = msg.toLowerCase();
+        msg = normalizar(msg);
 
-        if (msg.contains("medio kilo") ||
-            msg.contains("1/2 kilo") ||
-            msg.contains("1/2k")) return 0.5;
+        if (msg.contains("medio")) return 0.5;
+        if (msg.contains("cuarto")) return 0.25;
 
-        if (msg.contains("cuarto de kilo") ||
-            msg.contains("1/4 kilo") ||
-            msg.contains("1/4k")) return 0.25;
+        Pattern p = Pattern.compile("(\\d+(\\.\\d+)?)");
+        Matcher m = p.matcher(msg);
 
-        Pattern patternKilo =
-                Pattern.compile("(\\d+(\\.\\d+)?)\\s*(kilo|kg|k)");
-        Matcher matcherKilo = patternKilo.matcher(msg);
-
-        if (matcherKilo.find()) {
-            try {
-                return Double.parseDouble(matcherKilo.group(1));
-            } catch (NumberFormatException e) {
-                return 1;
-            }
-        }
-
-        Pattern patternNum = Pattern.compile("(\\d+)");
-        Matcher matcherNum = patternNum.matcher(msg);
-
-        if (matcherNum.find()) {
-            try {
-                return Double.parseDouble(matcherNum.group(1));
-            } catch (NumberFormatException e) {
-                return 1;
-            }
+        if (m.find()) {
+            return Double.parseDouble(m.group(1));
         }
 
         return 0;
     }
 
-    // =========================
-    // CAPITALIZAR
-    // =========================
     private String capitalize(String str) {
-
-        if (str == null || str.isEmpty()) return str;
-
-        return str.substring(0, 1).toUpperCase()
-                + str.substring(1);
+        return (str == null || str.isEmpty())
+                ? str
+                : str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 }
