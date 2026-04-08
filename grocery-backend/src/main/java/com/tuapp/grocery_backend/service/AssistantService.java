@@ -50,7 +50,7 @@ public class AssistantService {
 
         // ===== SALUDO =====
         if (msg.matches(".*\\b(hola|buenas|hey|hi|hello)\\b.*")) {
-            return "¡Hola! 👋 ¿Qué vamos a comprar hoy? 🛒";
+            return "¡Hola! 👋 ¿Qué te gustaría comprar hoy? 🛒";
         }
 
         // ===== DESPEDIDA / FINALIZAR ===== 🔥 FIX NUEVO
