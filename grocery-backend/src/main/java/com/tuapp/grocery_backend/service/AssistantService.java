@@ -157,7 +157,7 @@ public class AssistantService {
 
                 if (cantidad > 0) {
                     return agregarAlCarrito(p, cantidad, getNombre(p), usuario)
-                            + " 🛒 ¿Quieres algo más?";
+                            + " 🛒 ¿Quieres algo más? ¿te ofrezco algo mas?";
                 }
 
                 productoPendienteMap.put(usuario, p);
